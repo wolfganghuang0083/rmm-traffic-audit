@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RunningMate 2026年6月 GA4+GSC 流量分析</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root{
+    --navy:#003362; --gold:#d4af37; --line:#06C755;
+    --red:#d64545; --green:#1f7a4d; --gray:#8893a0;
+    --bg:#f4f6f9; --card:#ffffff; --ink:#1a2533; --soft:#5a6675;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Microsoft JhengHei','Segoe UI',sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.6; padding:0 0 60px;
+  }
+  .wrap{max-width:1160px; margin:0 auto; padding:0 18px;}
+
+  /* Header */
+  header{
+    background:linear-gradient(135deg,#002647 0%,#003362 55%,#0a4a82 100%);
+    color:#fff; padding:34px 0 30px; border-bottom:4px solid var(--gold);
+  }
+  header .wrap{padding:0 24px;}
+  .eyebrow{color:var(--gold); font-weight:700; letter-spacing:2px; font-size:13px; margin-bottom:8px;}
+  h1{font-size:28px; line-height:1.3; margin-bottom:12px;}
+  .verdict{
+    background:rgba(214,69,69,.16); border-left:4px solid var(--red);
+    padding:12px 16px; border-radius:6px; font-size:15.5px; max-width:880px; margin-bottom:14px;
+  }
+  .verdict b{color:#ffd0d0;}
+  .verdict .true{color:#a9e8c4; font-weight:700;}
+  .meta{font-size:12.5px; color:#bcd0e6; display:flex; flex-wrap:wrap; gap:6px 18px;}
+  .meta span::before{content:"●"; color:var(--gold); font-size:8px; vertical-align:middle; margin-right:6px;}
+
+  /* Sections */
+  section{margin-top:34px;}
+  .sec-title{font-size:21px; color:var(--navy); font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:10px;}
+  .sec-title .num{
+    background:var(--navy); color:#fff; width:30px; height:30px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; font-size:15px; flex:0 0 auto;
+  }
+  .sec-sub{color:var(--soft); font-size:14px; margin:4px 0 16px 40px;}
+
+  /* KPI */
+  .kpi-band{margin-top:26px;}
+  .band-label{font-weight:800; font-size:15px; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .band-label.fake{color:var(--gray);}
+  .band-label.real{color:var(--green);}
+  .tag{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:20px;}
+  .tag.warn{background:#fbe6e6; color:var(--red); border:1px solid #f0baba;}
+  .tag.ok{background:#e3f3ea; color:var(--green); border:1px solid #b6dfc6;}
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;}
+  .kpi{
+    background:var(--card); border-radius:12px; padding:16px 16px 14px; border:1px solid #e6ebf1;
+    box-shadow:0 1px 3px rgba(0,40,80,.05);
+  }
+  .kpi.fake{opacity:.96; border-style:dashed; border-color:#cdd5de; background:#fafbfc; position:relative;}
+  .kpi.fake::after{
+    content:"含大量 bot · 不可信"; position:absolute; top:10px; right:12px;
+    font-size:10px; color:var(--red); font-weight:700; background:#fbe6e6; padding:2px 7px; border-radius:10px;
+  }
+  .kpi .k-name{font-size:13px; color:var(--soft); margin-bottom:8px; font-weight:600;}
+  .kpi .k-flow{font-size:14px; color:var(--gray);}
+  .kpi .k-now{font-size:30px; font-weight:800; line-height:1; margin:2px 0 6px; letter-spacing:-.5px;}
+  .kpi.fake .k-now{color:var(--gray);}
+  .kpi.real .k-now{color:var(--navy);}
+  .k-delta{font-size:13.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;}
+  .up-bad{color:var(--gray);} .down-bad{color:var(--red);} .flat{color:var(--gray);} .good{color:var(--green);}
+  .k-note{font-size:11.5px; color:var(--soft); margin-top:6px; line-height:1.45;}
+
+  /* Cards / charts */
+  .card{
+    background:var(--card); border-radius:14px; padding:20px 22px; border:1px solid #e6ebf1;
+    box-shadow:0 2px 8px rgba(0,40,80,.05); margin-top:16px;
+  }
+  .chart-box{position:relative; height:340px;}
+  .chart-box.short{height:300px;}
+  .read{
+    margin-top:14px; font-size:13.5px; color:var(--soft); background:#f7f9fb;
+    border-left:3px solid var(--gold); padding:10px 14px; border-radius:0 6px 6px 0;
+  }
+  .read b{color:var(--ink);}
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:760px){.two-col{grid-template-columns:1fr;}}
+
+  /* Evidence list */
+  .ev-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:6px;}
+  .ev{background:var(--card); border:1px solid #e6ebf1; border-left:4px solid var(--red); border-radius:10px; padding:14px 16px;}
+  .ev .ev-num{font-size:26px; font-weight:800; color:var(--red); line-height:1;}
+  .ev .ev-lab{font-size:13px; font-weight:700; margin:6px 0 3px;}
+  .ev .ev-desc{font-size:12px; color:var(--soft); line-height:1.45;}
+
+  /* Tables */
+  table{width:100%; border-collapse:collapse; font-size:13px; margin-top:4px;}
+  th,td{padding:8px 10px; text-align:left; border-bottom:1px solid #eef1f5;}
+  th{background:#f3f6f9; color:var(--navy); font-weight:700; font-size:12px; position:sticky; top:0;}
+  td.num,th.num{text-align:right; font-variant-numeric:tabular-nums;}
+  tr:hover td{background:#fafcfe;}
+  .pill{font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; white-space:nowrap;}
+  .pill.office{background:#eef1f5; color:var(--gray);}
+  .pill.buyer{background:#e3f3ea; color:var(--green);}
+  .pill.brand{background:#fff4d6; color:#9a7b16;}
+  .scroll{max-height:430px; overflow:auto; border-radius:10px; border:1px solid #eef1f5;}
+
+  /* Green shoots */
+  .shoot{border-left:4px solid var(--green);}
+  .shoot .ev-num{color:var(--green);}
+
+  /* Did right */
+  .didright{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px;}
+  .dr{background:var(--card); border:1px solid #e6ebf1; border-radius:12px; padding:16px 18px;}
+  .dr h4{color:var(--navy); font-size:15px; margin-bottom:8px; display:flex; gap:8px; align-items:center;}
+  .dr h4 .ic{color:var(--green);}
+  .dr p{font-size:13px; color:var(--soft);}
+  .dr.caution{border-color:#f0d9a8; background:#fffdf6;}
+  .dr.caution h4{color:#9a7b16;}
+  .dr.caution h4 .ic{color:var(--gold);}
+
+  /* Action list */
+  .action{background:var(--card); border:1px solid #e6ebf1; border-radius:12px; padding:0; overflow:hidden; margin-top:8px;}
+  .act{display:flex; gap:14px; padding:16px 18px; border-bottom:1px solid #eef1f5; align-items:flex-start;}
+  .act:last-child{border-bottom:none;}
+  .act .rank{
+    background:var(--navy); color:#fff; width:30px; height:30px; border-radius:8px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+  }
+  .act .body{flex:1;}
+  .act .a-title{font-weight:800; font-size:15px; color:var(--ink); margin-bottom:3px;}
+  .act .a-desc{font-size:13px; color:var(--soft); margin-bottom:7px;}
+  .act .racae{font-size:12px; background:#eef4fb; color:var(--navy); border-radius:6px; padding:6px 10px; display:inline-block;}
+  .act .racae b{color:var(--green);}
+
+  footer{margin-top:40px; text-align:center; font-size:12px; color:var(--gray);}
+  .line-chip{background:var(--line); color:#fff; padding:2px 8px; border-radius:10px; font-weight:700; font-size:11px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">RUNNINGMATE · 流量真實性鑑定報告</div>
+    <h1>RunningMate 2026 年 6 月　GA4 + Search Console 流量分析</h1>
+    <div class="verdict">
+      一句誠實結論：<b>6 月帳面流量翻倍（sessions +134%）幾乎全是機器人灌進 Direct 的雜訊</b>；
+      用真人指標看，<span class="true">真實人流其實持平到小減</span>（engagedSessions 600→599、GSC 真人點擊 −13%、Organic −4.9%）。raw sessions / users 不可當成果。
+    </div>
+    <div class="meta">
+      <span>資料來源：GA4 property 376853678 + Google Search Console</span>
+      <span>比較期間：2026/6/1–6/23　vs　2026/5/1–5/23（GSC 為 6/1–22 vs 5/1–22）</span>
+      <span>產出日期：2026-06-23</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- KPI -->
+  <section>
+    <div class="sec-title"><span class="num">＝</span>KPI 雙排對比：帳面數字 vs 真實信號</div>
+    <div class="sec-sub">上排是「看似成長」的虛胖數字（已被 bot 污染、僅供存疑參考）；下排才是抗雜訊的真相。</div>
+
+    <div class="kpi-band">
+      <div class="band-label fake">帳面數字（看似成長）<span class="tag warn">⚠ 含大量 bot · 不可採信</span></div>
+      <div class="kpi-grid">
+        <div class="kpi fake">
+          <div class="k-name">工作階段 Sessions</div>
+          <div class="k-flow">1,404 →</div>
+          <div class="k-now">3,292</div>
+          <div class="k-delta up-bad">▲ +134.5%（虛胖）</div>
+          <div class="k-note">增量 +1,888 中，105.6% 來自 Direct 暴衝</div>
+        </div>
+        <div class="kpi fake">
+          <div class="k-name">使用者 Users</div>
+          <div class="k-flow">1,076 →</div>
+          <div class="k-now">2,989</div>
+          <div class="k-delta up-bad">▲ +177.8%（虛胖）</div>
+          <div class="k-note">新訪客使用者占 98.6%（2,946 / 2,989）</div>
+        </div>
+        <div class="kpi fake">
+          <div class="k-name">瀏覽量 Views</div>
+          <div class="k-flow">1,349 →</div>
+          <div class="k-now">3,332</div>
+          <div class="k-delta up-bad">▲ +147.0%（虛胖）</div>
+          <div class="k-note">桌機占 92.4%、近乎全新訪客</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-band">
+      <div class="band-label real">真實信號（才是真相）<span class="tag ok">抗雜訊 · 對外回報請用這排</span></div>
+      <div class="kpi-grid">
+        <div class="kpi real">
+          <div class="k-name">互動工作階段 engagedSessions</div>
+          <div class="k-flow">600 →</div>
+          <div class="k-now">599</div>
+          <div class="k-delta flat">＝ −0.2%（幾乎持平）</div>
+          <div class="k-note">真正有人在看的流量一年沒長，最誠實的鐵證</div>
+        </div>
+        <div class="kpi real">
+          <div class="k-name">GSC 真人點擊 Clicks</div>
+          <div class="k-flow">761 →</div>
+          <div class="k-now">660</div>
+          <div class="k-delta down-bad">▼ −13.3%</div>
+          <div class="k-note">獨立真人來源、不受 Direct 影響，反向打臉成長</div>
+        </div>
+        <div class="kpi real">
+          <div class="k-name">GSC 曝光 Impressions</div>
+          <div class="k-flow">45,604 →</div>
+          <div class="k-now">37,214</div>
+          <div class="k-delta down-bad">▼ −18.4%</div>
+          <div class="k-note">真人需求池在縮小</div>
+        </div>
+        <div class="kpi real">
+          <div class="k-name">GSC 平均排名 Position</div>
+          <div class="k-flow">8.4 →</div>
+          <div class="k-now">9.1</div>
+          <div class="k-delta down-bad">▼ 變差 +0.7 名</div>
+          <div class="k-note">數字越大代表排名越後面</div>
+        </div>
+        <div class="kpi real">
+          <div class="k-name">互動率 engagementRate</div>
+          <div class="k-flow">42.7% →</div>
+          <div class="k-now">18.2%</div>
+          <div class="k-delta down-bad">▼ 崩跌 24.5pt</div>
+          <div class="k-note">停留 141秒→60秒、跳出 57%→82%，全被雜訊稀釋</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Q1: channel -->
+  <section>
+    <div class="sec-title"><span class="num">①</span>為什麼帳面「成長」？管道對比：成長 100% 來自 Direct 暴衝</div>
+    <div class="sec-sub">把 5 月與 6 月各管道並排看：唯一爆量的是 Direct（14 倍），真正的獲客管道 Organic Search 反而小跌。</div>
+    <div class="card">
+      <div class="chart-box"><canvas id="chanChart"></canvas></div>
+      <div class="read"><b>解讀：</b>Direct 從 150 暴衝到 2,143（×14.3），單一管道貢獻 +1,993 工作階段＝總增量 1,888 的 <b>105.6%</b>（即 Organic 還倒扣 60）。<b>真實獲客管道（自然搜尋）沒成長反而衰退</b>，所謂成長是憑空多出來的 Direct 撐起來的。</div>
+    </div>
+  </section>
+
+  <!-- daily line -->
+  <section>
+    <div class="sec-title"><span class="num">②</span>6 月每日工作階段：階梯式抬高、非自然波形</div>
+    <div class="sec-sub">真人流量會隨內容/搜尋自然起伏；6 月 daily sessions 卻被墊到 100–228 的高原，是 Direct 灌入後的特徵。</div>
+    <div class="card">
+      <div class="chart-box"><canvas id="dailyChart"></canvas></div>
+      <div class="read"><b>解讀：</b>每日工作階段全月幾乎都站在 100 以上（5 月同期多在 30–90），但 <b>GSC 真人點擊（橘線）卻平平甚至下滑</b>。同一天 sessions 高、真人點擊不高，缺口就是 bot。6/21 真人點擊衝到 49（全月最高）是當天發「陪跑演化史」新文帶來的真實回彈。</div>
+    </div>
+  </section>
+
+  <!-- Q1 evidence -->
+  <section>
+    <div class="sec-title"><span class="num">③</span>為什麼判定是 bot？五項鐵證</div>
+    <div class="sec-sub">流量品質特徵全部指向自動化程式 / 機房流量，而非台灣中小企業老闆這種真實受眾。</div>
+    <div class="ev-grid">
+      <div class="ev">
+        <div class="ev-num">×14.3</div>
+        <div class="ev-lab">Direct 暴衝 150→2,143</div>
+        <div class="ev-desc">占全站 65.1% 工作階段，貢獻幾乎全部增量。</div>
+      </div>
+      <div class="ev">
+        <div class="ev-num">92.4%</div>
+        <div class="ev-lab">桌機占比（5月 82.7%）</div>
+        <div class="ev-desc">桌機增量 +1,881＝總增量的 99.6%；手機僅 +7（239→246）。</div>
+      </div>
+      <div class="ev">
+        <div class="ev-num">98.6%</div>
+        <div class="ev-lab">新訪客使用者（2,946/2,989）</div>
+        <div class="ev-desc">幾乎全是第一次到站、不回訪——程式特徵。</div>
+      </div>
+      <div class="ev">
+        <div class="ev-num">60秒</div>
+        <div class="ev-lab">平均停留（5月 141 秒）</div>
+        <div class="ev-desc">跳出率 57%→82%、互動率 42.7%→18.2%，全面崩壞。</div>
+      </div>
+      <div class="ev">
+        <div class="ev-num">599</div>
+        <div class="ev-lab">engagedSessions（持平）</div>
+        <div class="ev-desc">600→599，新增 2,693 個非互動 session 全是空殼。</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px;">
+      <div class="two-col">
+        <div>
+          <div class="band-label" style="color:var(--navy)">最致命鐵證：地理露餡（6 月各國工作階段）</div>
+          <div class="chart-box short"><canvas id="geoChart"></canvas></div>
+        </div>
+        <div>
+          <div class="band-label" style="color:var(--navy)">互動工作階段 vs 非互動工作階段</div>
+          <div class="chart-box short"><canvas id="engChart"></canvas></div>
+        </div>
+      </div>
+      <div class="read"><b>解讀：</b>RunningMate 服務台灣中小企業，但 6 月 <b>新加坡 1,233（37.5%）反超台灣 1,178（35.8%）</b>，加中國 676、香港 89，境外合計 1,998 占 60.7%——單一新加坡比台灣還多，就是地理灌水鐵證。右圖：新增的 1,888 個 session 幾乎全進了「非互動」桶（占比 57.3%→81.8%），真正互動的 599 紋風不動。</div>
+    </div>
+  </section>
+
+  <!-- Q1 GSC reality -->
+  <section>
+    <div class="sec-title"><span class="num">④</span>獨立真人來源（GSC）：clicks 與 impressions 雙雙下滑</div>
+    <div class="sec-sub">GSC 只計 Google 搜尋的真人點擊，完全不受 Direct 污染——它直接打臉「成長」說。</div>
+    <div class="card">
+      <div class="chart-box"><canvas id="gscChart"></canvas></div>
+      <div class="read"><b>解讀：</b>GA4 帳面 +134%，GSC 真人卻 clicks −13.3% / impressions −18.4% / 排名變差（8.4→9.1）。<b>方向完全反向背離</b>＝GA4 暴衝非真人。日均交叉佐證（6 月 engaged 日均 599/23≈26、5 月整月 783/31≈25）也顯示真人持平。</div>
+    </div>
+  </section>
+
+  <!-- Q2: real growth / green shoots -->
+  <section>
+    <div class="sec-title"><span class="num">⑤</span>真實成長在哪？（少數綠芽，量小但方向對）</div>
+    <div class="sec-sub">扣掉雜訊後，唯一真正在長的是 2026 新文從 0 長出真人點擊；舊骨幹則是「穩住」而非成長。</div>
+    <div class="ev-grid">
+      <div class="ev shoot">
+        <div class="ev-num">7</div>
+        <div class="ev-lab">claude-ai-agent（6/5 發）</div>
+        <div class="ev-desc">7 clicks / 95 曝光 / CTR 7.4% / 排名 6.6，發佈 2–3 週進前段。</div>
+      </div>
+      <div class="ev shoot">
+        <div class="ev-num">6</div>
+        <div class="ev-lab">multi-agent（6/6 發）</div>
+        <div class="ev-desc">6 clicks / 190 曝光 / 排名 6.7，新文有效的前兆。</div>
+      </div>
+      <div class="ev shoot">
+        <div class="ev-num">23</div>
+        <div class="ev-lab">enterprise-coaching（6/2 發）</div>
+        <div class="ev-desc">GA 23 瀏覽 / 20 使用者，5 月尚未發佈、從 0 起。</div>
+      </div>
+      <div class="ev shoot">
+        <div class="ev-num">+5.4%</div>
+        <div class="ev-lab">會議記錄撰寫方式（旗艦）</div>
+        <div class="ev-desc">GSC 148→156 clicks 逆勢，單頁占全站 23.6% 撐住大盤。</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="band-label" style="color:var(--navy)">GSC 6 月 Top 查詢（真人實際搜的字）</div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>查詢字</th><th>類型</th><th class="num">點擊</th><th class="num">曝光</th><th class="num">排名</th></tr></thead>
+          <tbody id="qTable"></tbody>
+        </table>
+      </div>
+      <div class="read"><b>解讀：</b>真正的買家字「電商陪跑」<b>排名第 1 但整月只有 4 次曝光</b>（需求極小）；點擊幾乎全被「結案報告 / 會議記錄」這類辦公文件字占滿。綠芽是真的，但量還是個位數，需要時間累積——這也佐證 6 月成長「不可能」來自今天（6/23）才開跑的 45 篇叢集。</div>
+    </div>
+  </section>
+
+  <!-- Q audience relevance -->
+  <section>
+    <div class="sec-title"><span class="num">⑥</span>受眾相關性警訊：高流量、零相關、難轉換</div>
+    <div class="sec-sub">真人來搜尋的 9 成是要「下載一份範本 / 查格式」的上班族，不是要找陪跑顧問的老闆。</div>
+    <div class="card">
+      <div class="two-col">
+        <div>
+          <div class="chart-box short"><canvas id="audChart"></canvas></div>
+        </div>
+        <div style="display:flex; flex-direction:column; justify-content:center; gap:12px;">
+          <div class="ev" style="border-left-color:var(--gray)">
+            <div class="ev-num" style="color:var(--gray)">110</div>
+            <div class="ev-lab">辦公文件字點擊（會議記錄 / 結案報告族，前 16 字）</div>
+            <div class="ev-desc">占已抽樣 top 清單（142/660，覆蓋約 22%）的 77.5%；對全站 660 約 16.7%。</div>
+          </div>
+          <div class="ev shoot">
+            <div class="ev-num">9</div>
+            <div class="ev-lab">買家 / 品牌字點擊（電商陪跑3＋陪跑意思2＋狼大2＋黃聖閔2）</div>
+            <div class="ev-desc">僅占全站約 1.4%——要找陪跑顧問的人幾乎沒進來。</div>
+          </div>
+          <div class="ev" style="border-left-color:var(--red)">
+            <div class="ev-num">38</div>
+            <div class="ev-lab">/consulting/ 轉換核心頁整月瀏覽</div>
+            <div class="ev-desc">流量入口（辦公文章）與轉換出口（諮詢頁）完全脫節。</div>
+          </div>
+        </div>
+      </div>
+      <div class="read"><b>解讀：</b>流量的「受眾品質」而非「流量量級」才是轉換瓶頸。辦公族拿到模板就走、不會加 LINE；新買家頁（enterprise-coaching 23 瀏覽、/consulting/ 38 瀏覽）流量極稀。要改寫受眾組成，得靠 6/23 起 drip 的買家字叢集，並專盯買家字的曝光起量。</div>
+    </div>
+  </section>
+
+  <!-- device + new vs returning -->
+  <section>
+    <div class="sec-title"><span class="num">⑦</span>裝置與新舊訪客分布（佐證 bot）</div>
+    <div class="sec-sub">真人受眾（中小企業老闆）行動比例不可能這麼低；近乎全桌機＋全新訪客＝自動化程式特徵。</div>
+    <div class="card">
+      <div class="two-col">
+        <div>
+          <div class="band-label" style="color:var(--navy)">6 月裝置分布</div>
+          <div class="chart-box short"><canvas id="devChart"></canvas></div>
+        </div>
+        <div>
+          <div class="band-label" style="color:var(--navy)">新訪客 vs 回訪（使用者）</div>
+          <div class="chart-box short"><canvas id="nvrChart"></canvas></div>
+        </div>
+      </div>
+      <div class="read"><b>解讀：</b>桌機占 92.4%、手機僅 7.5%；新訪客使用者占 98.6%、回訪僅 197 人。對照 5 月（桌機 82.7%、新訪客約 95%），6 月的「新增受眾」根本不是台灣電商老闆，是 bot / 垃圾 Direct。</div>
+    </div>
+  </section>
+
+  <!-- Q3: did right -->
+  <section>
+    <div class="sec-title"><span class="num">⑧</span>我們做對了什麼？（誠實版，只認真實信號）</div>
+    <div class="sec-sub">把假成長砍掉後，真正值得肯定的只有三件——而且都還很小，必須誠實標註。</div>
+    <div class="didright">
+      <div class="dr">
+        <h4><span class="ic">✔</span>SEO 骨幹資產仍穩坐前段</h4>
+        <p>2022 工具長文是流量命脈。旗艦「會議記錄撰寫方式」在惡劣大盤下逆勢 +5.4%（148→156 clicks），單頁占全站真人點擊 23.6%、impressions 8,451。連同結案報告 racae（50 clicks、排名變好至 3.9）一起撐住大盤。<b>過去「做對」最值錢的一件事。</b></p>
+      </div>
+      <div class="dr">
+        <h4><span class="ic">✔</span>新文「種下去就發芽」</h4>
+        <p>6/2、6/5、6/6 三篇新文上線 2–3 週內即拿到真人 organic 點擊（claude-ai-agent 7 clicks、multi-agent 6 clicks、enterprise-coaching GA 23 瀏覽），起步排名就落在 6–7 名前段。證明「發文＋RankMath meta」這套產線方向對了。</p>
+      </div>
+      <div class="dr">
+        <h4><span class="ic">✔</span>定位轉企業 AI 陪跑、漏斗導 LINE</h4>
+        <p>首頁 Hero 改版（手機優先）、/consulting/ 漏斗＋CTA 全導 LINE 已上線；新文也鎖定企業 AI 陪跑主題。方向正確，但搜尋端的買家需求池尚未建立（買家字曝光極小），效果要等。</p>
+      </div>
+      <div class="dr caution">
+        <h4><span class="ic">⚠</span>誠實標註：45 篇叢集今天才開跑</h4>
+        <p>六大叢集 45 篇全草稿完成，但 drip 發佈 <b>6/23（今天）才開始 → 7/15</b>。邏輯上不可能是 6 月任何變化的成因，<b>不能歸功於近期內容動作</b>。其成效要等 7 月底之後才能評估。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Q4: how to keep growing -->
+  <section>
+    <div class="sec-title"><span class="num">⑨</span>怎麼持續成長？（行動清單，依優先序，每項 RACAE 可驗證）</div>
+    <div class="sec-sub">先清資料止血、再下對賭注。KPI 一律改盯 engagedSessions / Organic / GSC clicks，徹底忽略 raw sessions。</div>
+    <div class="action">
+      <div class="act">
+        <div class="rank">1</div>
+        <div class="body">
+          <div class="a-title">清資料：先把 bot 過濾掉，否則所有決策都被污染</div>
+          <div class="a-desc">GA4 設 bot / 內部流量過濾與「真人」探索區隔（排除 Direct + desktop + 新訪客異常、Singapore / China 來源）；並排查 Direct 暴衝是「外部 bot」還是「自灌」（GTM 重複觸發 / 預覽流量 / uptime 監控 / referrer 遺失），(not set) landing 198 是最大可疑入口。</div>
+          <div class="racae">RACAE 驗證：套過濾後重看 6/1–23，預期 engaged / Organic 數字幾乎不動 → <b>即證明「成長＝雜訊」</b>，並定出乾淨基線供 7 月 drip 對照。</div>
+        </div>
+      </div>
+      <div class="act">
+        <div class="rank">2</div>
+        <div class="body">
+          <div class="a-title">最大複利賭注：45 篇買家字叢集（未來 4–8 週成長引擎）</div>
+          <div class="a-desc">今天才 drip 開跑，當「未來」引擎、用 GSC 新頁排名追蹤而非流量。已上線新文（claude-ai-agent CTR 7.4%、multi-agent 排名 6.7）已給出正向訊號值得加碼；純「陪跑」字需求小（電商陪跑僅 4 曝光），要靠叢集做長尾＋品牌字總和。</div>
+          <div class="racae">RACAE 驗證：新買家字頁在 <b>28–56 天內進前 20 名、單頁 impressions 破百</b>；7/15 drip 完比對每頁 GSC impressions / position 成長曲線。</div>
+        </div>
+      </div>
+      <div class="act">
+        <div class="rank">3</div>
+        <div class="body">
+          <div class="a-title">搶救衰退的 Organic：刷新滑落的 2022 骨幹舊文</div>
+          <div class="a-desc">clicks / impressions / 排名三降。明顯滑落：fb 數據指標頁 28→16（排名 7.5→8.9）、結案報告 racae 60→50、fb 受眾頁 41→18、關鍵字文案頁 27→12。刷新（更新日期、補新段落、強化 schema）比寫新文更快見效。</div>
+          <div class="racae">RACAE 實驗：挑掉最多的 5 篇做刷新 pass，48–72 小時後追單頁 <b>position 是否回升 ≥0.5 名、clicks 回補</b>。低風險高確定性回血。</div>
+        </div>
+      </div>
+      <div class="act">
+        <div class="rank">4</div>
+        <div class="body">
+          <div class="a-title">高曝光低 CTR 的「免費點擊金礦」：優化 title / meta</div>
+          <div class="a-desc">「會議記錄」單字 2,452 曝光只換 15 點（CTR 0.61%、排名 3.6，明明在第一頁卻沒人點）；對照「會議記錄模板」CTR 15.8%、「結案報告格式」33%。支柱頁整頁 8,451 曝光僅 1.85% CTR。不靠新排名就能增量。</div>
+          <div class="racae">RACAE 實驗：重寫 title / meta 加數字與利益點，A/B 看 28 天後 <b>CTR 0.61% → 目標 2%</b>＝同排名多約 35 點/月，零新內容成本。</div>
+        </div>
+      </div>
+      <div class="act">
+        <div class="rank">5</div>
+        <div class="body">
+          <div class="a-title">辦公文件字定位為「漏斗誘餌」：在高流量工具頁植入導 LINE</div>
+          <div class="a-desc">會議記錄 / 結案報告字不是買家（占真人點擊約 16.7%），但會議記錄頁單頁就 156 clicks/月。把這批高流量當品牌曝光＋漏斗誘餌，在頁底加「老闆帶團隊用 AI 自動生會議記錄 → 免費 <span class="line-chip">LINE</span> 諮詢」誘餌＋內鏈導 /consulting/。</div>
+          <div class="racae">RACAE 實驗：追該頁 <b>outbound-to-LINE 點擊率</b>，驗證能否把辦公族流量轉成 1–2% 諮詢線索；否則純當 SEO 權重資產，不再投產能。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card" style="border-left:4px solid var(--gray); background:#fbfcfd;">
+      <div class="band-label" style="color:var(--gray)">必須誠實附帶的保留（caveats）</div>
+      <p style="font-size:13px; color:var(--soft);">
+      ① 本資料無 IP / UA 逐筆欄位，「bot」是依「桌機 92% ＋ 新訪客 98.6% ＋ 境外 60.7% ＋ 互動全崩」的綜合旁證推論，建議用 GA4 即時/事件報表或伺服器 log 做最終確認。
+      ② Direct 暴衝起點與 6/1 Hero 改版/發文時間吻合，須分清「外部 bot」與「自灌」——兩者止血手段完全不同。
+      ③ GSC 真人 −13% 尚未排除季節性 / Google 核心更新等外部因素，方向（衰退）可信但歸因未證，需拉 2025 同期更長基線分離。
+      ④ <b>本分析全部停在流量層，零轉換數據</b>：RunningMate 唯一真 KPI 是 LINE 諮詢筆數，最終商業成效須以實際諮詢數驗證，流量策略不等於營收成長。
+      ⑤ GSC 視窗 6/1–22、GA 6/1–23，且 6 月未滿月、月底 GSC 常有 1–2 天回填延遲，跨源比較勿做到小數點精度。
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    RunningMate（runningmatemarketing.com）｜資料：GA4 property 376853678 + Search Console｜誠實第一：raw sessions/users +134% 為雜訊，真實 KPI＝GSC clicks 660 與 engagedSessions 599
+  </footer>
+
+</div>
+
+<script>
+const NAVY='#003362', GOLD='#d4af37', LINE='#06C755', RED='#d64545', GREEN='#1f7a4d', GRAY='#8893a0';
+Chart.defaults.font.family = "-apple-system,'PingFang TC','Microsoft JhengHei',sans-serif";
+Chart.defaults.color = '#5a6675';
+const fmt = v => v.toLocaleString();
+
+// 1. Channel comparison
+new Chart(document.getElementById('chanChart'), {
+  type:'bar',
+  data:{
+    labels:['Direct（直接）','Organic Search（自然搜尋）','其他（推薦/社群等）'],
+    datasets:[
+      {label:'5 月 (5/1–23)', data:[150,1233,23], backgroundColor:GRAY, borderRadius:5},
+      {label:'6 月 (6/1–23)', data:[2143,1173,19], backgroundColor:[RED,GREEN,GRAY], borderRadius:5}
+    ]
+  },
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},
+      tooltip:{callbacks:{label:c=>c.dataset.label+'：'+fmt(c.parsed.y)+' 工作階段'}}},
+    scales:{y:{beginAtZero:true, title:{display:true,text:'工作階段 Sessions'}}}}
+});
+
+// 2. Daily line: GA sessions vs GSC clicks
+const dDates=['6/1','6/2','6/3','6/4','6/5','6/6','6/7','6/8','6/9','6/10','6/11','6/12','6/13','6/14','6/15','6/16','6/17','6/18','6/19','6/20','6/21','6/22','6/23'];
+const dGaSess=[125,148,133,125,145,81,74,124,141,198,206,200,127,109,133,175,214,213,103,105,124,228,102];
+const dGsc=[39,47,30,37,30,8,32,43,47,51,35,14,11,26,44,39,43,18,9,8,49,null,null];
+new Chart(document.getElementById('dailyChart'), {
+  type:'line',
+  data:{labels:dDates, datasets:[
+    {label:'GA4 工作階段（含 bot）', data:dGaSess, borderColor:GRAY, backgroundColor:'rgba(136,147,160,.12)', fill:true, tension:.3, yAxisID:'y', borderWidth:2, pointRadius:2},
+    {label:'GSC 真人點擊（無 bot）', data:dGsc, borderColor:GOLD, backgroundColor:'transparent', tension:.3, yAxisID:'y1', borderWidth:2.5, pointRadius:2}
+  ]},
+  options:{responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'top'}},
+    scales:{
+      y:{beginAtZero:true, position:'left', title:{display:true,text:'GA4 工作階段'}},
+      y1:{beginAtZero:true, position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'GSC 真人點擊'}}
+    }}
+});
+
+// geo
+new Chart(document.getElementById('geoChart'), {
+  type:'bar',
+  data:{labels:['新加坡','台灣','中國','香港','美國','其他'],
+    datasets:[{label:'6 月工作階段', data:[1233,1178,676,89,47,71],
+      backgroundColor:[RED,GREEN,RED,RED,GRAY,GRAY], borderRadius:5}]},
+  options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>fmt(c.parsed.x)+' 工作階段'}}},
+    scales:{x:{beginAtZero:true}}}
+});
+
+// engaged vs non-engaged
+new Chart(document.getElementById('engChart'), {
+  type:'bar',
+  data:{labels:['5 月 (5/1–23)','6 月 (6/1–23)'],
+    datasets:[
+      {label:'互動工作階段（真人錨點）', data:[600,599], backgroundColor:GREEN, borderRadius:4},
+      {label:'非互動工作階段（雜訊本體）', data:[804,2693], backgroundColor:RED, borderRadius:4}
+    ]},
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},
+      tooltip:{callbacks:{label:c=>c.dataset.label+'：'+fmt(c.parsed.y)}}},
+    scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, title:{display:true,text:'工作階段'}}}}
+});
+
+// GSC clicks + impressions
+new Chart(document.getElementById('gscChart'), {
+  type:'bar',
+  data:{labels:['GSC 真人點擊 Clicks','GSC 曝光 Impressions'],
+    datasets:[
+      {label:'5 月 (5/1–22)', data:[761,45604], backgroundColor:GRAY, borderRadius:5, yAxisID:'y'},
+      {label:'6 月 (6/1–22)', data:[660,37214], backgroundColor:RED, borderRadius:5, yAxisID:'y'}
+    ]},
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},
+      tooltip:{callbacks:{label:c=>c.dataset.label+'：'+fmt(c.parsed.y)}}},
+    scales:{y:{type:'logarithmic', title:{display:true,text:'數量（對數軸，clicks 與 impressions 量級差大）'}}}}
+});
+
+// q table
+const qData=[
+  ['結案報告','office',22,150,1.2],['會議記錄格式','office',20,644,4.0],['會議記錄','office',15,2452,3.6],
+  ['會議記錄模板','office',12,76,3.1],['會議記錄範本','office',12,262,1.4],['會議記錄怎麼寫','office',5,82,1.9],
+  ['海鷹數據','office',5,116,3.2],['電商陪跑','buyer',3,4,1.0],['專案結案報告範本','office',3,16,2.8],
+  ['廣告受眾名稱','office',3,20,6.4],['結案報告格式','office',3,9,1.9],['陪跑 意思','buyer',2,21,3.0],
+  ['狼大','brand',2,40,7.2],['黃聖閔','brand',2,69,6.6],['募資問卷','office',2,14,4.5],['引流品','office',2,14,1.9]
+];
+const tbody=document.getElementById('qTable');
+const pillTxt={office:'辦公文件',buyer:'買家字',brand:'品牌字'};
+qData.forEach(r=>{
+  tbody.innerHTML+=`<tr><td>${r[0]}</td><td><span class="pill ${r[1]}">${pillTxt[r[1]]}</span></td><td class="num">${r[2]}</td><td class="num">${fmt(r[3])}</td><td class="num">${r[4]}</td></tr>`;
+});
+
+// audience doughnut
+new Chart(document.getElementById('audChart'), {
+  type:'doughnut',
+  data:{labels:['辦公文件字 110','買家+品牌字 9','其他真人點擊 ~541'],
+    datasets:[{data:[110,9,541], backgroundColor:[GRAY,GREEN,'#cdd5de'], borderWidth:2, borderColor:'#fff'}]},
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom'}, title:{display:true,text:'GSC 真人點擊受眾結構（全站 660 clicks）'},
+      tooltip:{callbacks:{label:c=>c.label+'：'+fmt(c.parsed)+' clicks'}}}}
+});
+
+// device doughnut
+new Chart(document.getElementById('devChart'), {
+  type:'doughnut',
+  data:{labels:['桌機 desktop 3,042','手機 mobile 246','平板 tablet 5'],
+    datasets:[{data:[3042,246,5], backgroundColor:[RED,GREEN,GRAY], borderWidth:2, borderColor:'#fff'}]},
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom'},
+      tooltip:{callbacks:{label:c=>c.label.split(' ')[0]+'：'+fmt(c.parsed)+' 工作階段（占 '+(c.parsed/3293*100).toFixed(1)+'%）'}}}}
+});
+
+// new vs returning
+new Chart(document.getElementById('nvrChart'), {
+  type:'doughnut',
+  data:{labels:['新訪客 new 2,946','回訪 returning 197','(未定義) 81'],
+    datasets:[{data:[2946,197,81], backgroundColor:[RED,GREEN,GRAY], borderWidth:2, borderColor:'#fff'}]},
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom'},
+      tooltip:{callbacks:{label:c=>c.label.split(' ')[0]+'：'+fmt(c.parsed)+' 使用者'}}}}
+});
+</script>
+</body>
+</html>
